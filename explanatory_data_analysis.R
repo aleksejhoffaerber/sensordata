@@ -1,12 +1,10 @@
 # packages
 
 library(dplyr)
-library(recipes)
 library(tsibble)
 library(ggplot2)
 library(lubridate)
 library(patchwork)
-library(tidymodels)
 
 # preliminary information -----
 
@@ -14,15 +12,11 @@ library(tidymodels)
 # sensors: 53 sensors that measure every five minutes, show different (unknown) values
 # shutdowns: regular factory shutdowns 
 
-# load data ----
+# LOADING ----
 
 components <- readr::read_delim("Data/component_changes.csv", delim = ";") 
 sensors <- readr::read_delim("Data/sensor_measurements.csv", delim = ";")
 shutdowns <- readr::read_delim("Data/shutdowns.csv", delim = ";")
-
-# TODO: how to combine the data sets? 1) meas_dttm & 
-
-# TODO: change all date value to tsibble date format
 
 sensors <- sensors %>% 
   mutate(sensor_name = sensor_name %>% 
@@ -34,24 +28,10 @@ sensors_avg <- sensors %>%
   group_by(meas_dttm = floor_date(meas_dttm, "hours"), sensor_name) %>% 
   summarise(value = mean(value, na.rm = T))
 
-# TODO: shutdowns: diff between start - end
 shutdowns <- shutdowns %>% 
   mutate(diff = shutdown_end_dttm - shutdown_start_dttm)
 
-
-# EDA ----
-
-sensors_avg %>% 
-  ggplot(aes(sensor_name, value)) + 
-  geom_boxplot() +
-  theme_bw()
-  
-
-# combine sensors and component data
-
-# TODO: waht is meant with "lifetime" given sensors?
-# especially, because it is changed monthly...
-
+# DATA WRANGLING ----
 
 start <- sensors_avg %>% ungroup() %>% slice(1) %>% select(meas_dttm) %>% as.matrix() %>% as_date()
 end <- sensors_avg %>% ungroup() %>% tail(1) %>% select(meas_dttm) %>% as.matrix() %>% as_date()
@@ -62,7 +42,7 @@ components <- components %>%
            installation_dttm <= end) %>% 
   mutate(change = row_number())
 
-# join data frames  ------
+# join data frames  
 lifetime <- components %>% 
   mutate(replaced = "Y") %>% 
   right_join(sensors_avg, by = c("installation_dttm" = "meas_dttm")) %>% 
@@ -101,24 +81,30 @@ to_del <- map(1:nrow(shutdown), ~lifetime %>%
 lifetime_clean <- lifetime %>% 
   anti_join(to_del)
 
-# check for cleanness
+
+# EDA -----
+
+# sensor behavior ----
 lifetime_clean %>% 
   ggplot(aes(installation_dttm, value)) +
   geom_line() +
   facet_wrap(~sensor_name, scales = "free") +
   theme_bw()
 
-# correlation analysis
+sensor_id_combinations <- crossing(lifetime_clean %>% distinct(sensor_name),
+                                   lifetime_clean %>% distinct(component_id)) %>% 
+  filter(component_id < 1407)
 
-sensor_lifetime_corr <- map(1:nlevels(lifetime_clean$sensor_name), ~ lifetime_clean %>% 
-      filter(sensor_name == .x) %>% 
-      select(value, lifetime) %>% 
-      corrr::correlate(quiet = T) %>% 
-      slice(1) %>% 
-      select(lifetime) %>% 
-      as.numeric() %>% 
+# correlation analysis, by sensor ----- 
+sensor_lifetime_corr <- map(1:nlevels(lifetime_clean$sensor_name), ~ lifetime_clean %>%
+      filter(sensor_name == .x) %>%
+      select(value, lifetime) %>%
+      corrr::correlate(quiet = T) %>%
+      slice(1) %>%
+      select(lifetime) %>%
+      as.numeric() %>%
       tibble(sensor = .x,
-             corr = .)) %>% 
+             corr = .)) %>%
   reduce(bind_rows)
 
 sensor_lifetime_corr %>% 
@@ -130,8 +116,39 @@ sensor_lifetime_corr %>%
        y = "Correlation") +
   theme_bw()
 
-# forecasting model (prediction for sensor 35)
+# correlation analysis, by sensor and component id 
+sensor_lifetime_corr_id <- map(1:nrow(sensor_id_combinations), ~ lifetime_clean %>% 
+                              filter(sensor_name == paste(sensor_id_combinations[.x,1]),
+                                     component_id == as.numeric(sensor_id_combinations[.x,2])) %>% 
+                              select(value, lifetime) %>% 
+                              corrr::correlate(quiet = T) %>% 
+                              slice(1) %>% 
+                              select(lifetime) %>% 
+                              as.numeric() %>% 
+                              tibble(component_id = as.numeric(sensor_id_combinations[.x,2]),
+                                     sensor = paste(sensor_id_combinations[.x,1]),
+                                     corr = .)) %>% 
+  reduce(bind_rows)
 
+sensor_lifetime_corr_id %>% 
+  ggplot(aes(reorder(sensor, -corr), corr)) +
+  geom_col(position = position_stack(reverse = TRUE)) +
+  # geom_text(aes(label = scales::number(corr, accuracy = .01)), angle = 90, hjust = -.5) +
+  scale_y_continuous(limits = c(-1,1)) +
+  facet_wrap(~component_id, nrow = 2) +
+  labs(x = "Sensor",
+       y = "Correlation") +
+  theme_bw()
 
+# graph of best correlated component ----
 
+lifetime_clean %>%
+  filter(sensor_name == 35) %>% 
+  ggplot(aes(lifetime, value)) +
+  geom_line(alpha = .3) +
+  geom_smooth(se = F) +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
 
