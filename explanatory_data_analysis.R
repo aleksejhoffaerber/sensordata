@@ -4,7 +4,6 @@ library(dplyr)
 library(tsibble)
 library(ggplot2)
 library(lubridate)
-library(patchwork)
 
 # preliminary information -----
 
@@ -84,12 +83,41 @@ lifetime_clean <- lifetime %>%
 
 # EDA -----
 
+change_at <- lifetime_clean %>% 
+  group_by(change) %>% 
+  summarise(max_lifetime = max(lifetime),
+            date = max(installation_dttm)) %>% 
+  filter(change < 3) %>% 
+  as.data.frame()
+
+# lifetime distribution
+lifetime_clean %>% 
+  ggplot(aes(installation_dttm, lifetime)) +
+  geom_vline(xintercept = change_at$date, colour = "#0533ff", linetype = "dashed") +
+  geom_line() +
+  labs(title = "Component lifetime across complete data history",
+       x = "Date",
+       y = "Component Lifetime") +
+  theme_bw()
+
+ggsave("01_EDA_Data Path.png", path = "Plots", 
+       width = 9, height = 5, dpi = 300)
+
 # sensor behavior ----
+
+
 lifetime_clean %>% 
   ggplot(aes(installation_dttm, value)) +
-  geom_line() +
-  facet_wrap(~sensor_name, scales = "free") +
+  geom_line(alpha = .3) +
+  geom_vline(xintercept = change_at$date, colour = "red") +
+  facet_wrap(~sensor_name, scales = "free_y") +
+  labs(title = "Sensor data across data sample and replacement timestamps",
+       x = "Date",
+       y = "Sensor Values") +
   theme_bw()
+  
+ggsave("04_EDA_Sensors.png", path = "Plots", 
+       width = 22, height = 10, dpi = 300)
 
 sensor_id_combinations <- crossing(lifetime_clean %>% distinct(sensor_name),
                                    lifetime_clean %>% distinct(component_id)) %>% 
@@ -109,12 +137,16 @@ sensor_lifetime_corr <- map(1:nlevels(lifetime_clean$sensor_name), ~ lifetime_cl
 
 sensor_lifetime_corr %>% 
   ggplot(aes(reorder(sensor, -corr), corr)) +
-  geom_col(position = position_stack(reverse = TRUE)) +
+  geom_col(position = position_stack(reverse = TRUE), fill = "#e6aa32") +
   # geom_text(aes(label = scales::number(corr, accuracy = .01)), angle = 90, hjust = -.5) +
   scale_y_continuous(limits = c(-1,1)) +
-  labs(x = "Sensor",
+  labs(title = "Sensor-Lifetime correlation across whole sample",
+       x = "Sensor",
        y = "Correlation") +
   theme_bw()
+
+ggsave("02_EDA_Correlation Whole Sample.png", path = "Plots", 
+       width = 10, height = 3, dpi = 300)
 
 # correlation analysis, by sensor and component id 
 sensor_lifetime_corr_id <- map(1:nrow(sensor_id_combinations), ~ lifetime_clean %>% 
@@ -132,23 +164,35 @@ sensor_lifetime_corr_id <- map(1:nrow(sensor_id_combinations), ~ lifetime_clean 
 
 sensor_lifetime_corr_id %>% 
   ggplot(aes(reorder(sensor, -corr), corr)) +
-  geom_col(position = position_stack(reverse = TRUE)) +
+  geom_col(position = position_stack(reverse = TRUE), fill = "#e6aa32") +
   # geom_text(aes(label = scales::number(corr, accuracy = .01)), angle = 90, hjust = -.5) +
   scale_y_continuous(limits = c(-1,1)) +
   facet_wrap(~component_id, nrow = 2) +
-  labs(x = "Sensor",
+  labs(title = "Sensor-Lifetime correlation by component ID (same manufacturer)",
+       x = "Sensor",
        y = "Correlation") +
   theme_bw()
+
+ggsave("03_EDA_Correlation by ID.png", path = "Plots", 
+       width = 10, height = 3, dpi = 300)
 
 # graph of best correlated component ----
 
 lifetime_clean %>%
   filter(sensor_name == 35) %>% 
   ggplot(aes(lifetime, value)) +
+  geom_rect(aes(xmin = 815, xmax = 887, ymin = 0.02, ymax = 0.125), fill = "#e6aa32", alpha = .1) +
   geom_line(alpha = .3) +
-  geom_smooth(se = F) +
+  geom_smooth(se = F, colour = "#0533ff") +
   theme_bw() +
-  theme(legend.position = "bottom", legend.box = "horizontal") +
-  scale_color_discrete(NULL) + 
-  guides(colour = guide_legend(nrow = 1))
+  labs(title = "Sensor 35 across lifetime with marked replacement intervals",
+       subtitle = "Highest correlation with lifetime but only until the 800 hour mark",
+       x = "Component Lifetime",
+       y = "Sensor Value") +
+  scale_x_continuous(breaks = seq(0,900,50)) +
+  scale_y_continuous(limits = c(0.02,0.125))
+
+ggsave("05_EDA_Sensor Correaltion.png", path = "Plots", 
+       width = 10, height = 6, dpi = 300)
+  
 
