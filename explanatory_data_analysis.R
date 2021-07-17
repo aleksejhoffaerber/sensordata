@@ -1,6 +1,8 @@
 # packages
 
 library(dplyr)
+library(tidyr)
+library(purrr)
 library(tsibble)
 library(ggplot2)
 library(lubridate)
@@ -100,8 +102,8 @@ lifetime_clean %>%
        y = "Component Lifetime") +
   theme_bw()
 
-ggsave("01_EDA_Data Path.png", path = "Plots", 
-       width = 9, height = 5, dpi = 300)
+# ggsave("01_EDA_Data Path.png", path = "Plots", 
+#        width = 9, height = 5, dpi = 300)
 
 # sensor behavior ----
 
@@ -116,8 +118,8 @@ lifetime_clean %>%
        y = "Sensor Values") +
   theme_bw()
   
-ggsave("04_EDA_Sensors.png", path = "Plots", 
-       width = 22, height = 10, dpi = 300)
+# ggsave("04_EDA_Sensors.png", path = "Plots", 
+#        width = 22, height = 10, dpi = 300)
 
 sensor_id_combinations <- crossing(lifetime_clean %>% distinct(sensor_name),
                                    lifetime_clean %>% distinct(component_id)) %>% 
@@ -145,8 +147,8 @@ sensor_lifetime_corr %>%
        y = "Correlation") +
   theme_bw()
 
-ggsave("02_EDA_Correlation Whole Sample.png", path = "Plots", 
-       width = 10, height = 3, dpi = 300)
+# ggsave("02_EDA_Correlation Whole Sample.png", path = "Plots", 
+#        width = 10, height = 3, dpi = 300)
 
 # correlation analysis, by sensor and component id 
 sensor_lifetime_corr_id <- map(1:nrow(sensor_id_combinations), ~ lifetime_clean %>% 
@@ -173,8 +175,8 @@ sensor_lifetime_corr_id %>%
        y = "Correlation") +
   theme_bw()
 
-ggsave("03_EDA_Correlation by ID.png", path = "Plots", 
-       width = 10, height = 3, dpi = 300)
+# ggsave("03_EDA_Correlation by ID.png", path = "Plots", 
+#        width = 10, height = 3, dpi = 300)
 
 # graph of best correlated component ----
 
@@ -192,7 +194,7 @@ lifetime_clean %>%
   scale_x_continuous(breaks = seq(0,900,50)) +
   scale_y_continuous(limits = c(0.02,0.125))
 
-ggsave("05_EDA_Sensor Correaltion.png", path = "Plots", 
-       width = 10, height = 6, dpi = 300)
+# ggsave("05_EDA_Sensor Correaltion.png", path = "Plots", 
+#        width = 10, height = 6, dpi = 300)
   
 
