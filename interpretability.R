@@ -46,5 +46,8 @@ to_ice_plot %>%
     theme_bw() +
     theme(legend.position = "none")
 
+
 ggsave("08_ICE XGBoost Model.png", path = "Plots", 
       width = 10, height = 6, dpi = 300)
+
+
