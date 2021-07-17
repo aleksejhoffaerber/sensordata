@@ -52,6 +52,7 @@ params_xgb <- dials::parameters(
   learn_rate(),
   loss_reduction())
 
+# TODO: implement LHS based HPO
 grid_xgb <- dials::grid_max_entropy(
   params_xgb, 
   size = 60)
@@ -77,10 +78,22 @@ tuned_xgb %>%
 final_xgb <- tuned_xgb %>% 
   select_best("rmse")
 
+# final and best xgb model
 model_final_xgb <- model_xgb %>% 
   finalize_model(final_xgb)
 
+## CREATING A WORKFLOW MODEL TYPE OUT OF THE FINAL XGB MODEL
+final_workflow_xgb <- workflow() %>% 
+  add_model(model_final_xgb) %>% 
+  add_recipe(recipe_xgb)
+
+# FIXME: why different performance oif xgb_fit vs. train_prediction
+xgb_fit <- final_workflow_xgb %>% 
+  fit(data = training(splits))
+
+
 # train set fit -----
+# apply computations to new data
 train_processed <- bake(recipe_xgb,  new_data = training(splits))
 train_prediction <- model_final_xgb %>%
   # fit the model on all the training data
@@ -144,7 +157,7 @@ test_prediction %>%
 ggsave("06_XGB_Fit Results.png", path = "Plots", 
          width = 7, height = 6, dpi = 300)
 
-# feature importance for XGB
+# in-sample feature importance for XGB -----
 xgboost::xgb.importance(model = train_prediction$fit) %>% head(n = 10) %>% 
   ggplot(aes(Gain, reorder(Feature, Gain))) +
   geom_col() +
