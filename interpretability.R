@@ -109,5 +109,8 @@ ale %>%
        subtitle = "Only sensor 44 and lifetime show noteworthy effect on the predictor, \nwith sensor 26 and 31 showing contextual influence",
        x = "Sensor Values",
        y = "Relative Importance") +
-  theme_minimal() +
+  theme_bw() +
   theme(legend.position = "none")
+
+ggsave("09_ALE XGBoost Model.png", path = "Plots", 
+       width = 10, height = 6, dpi = 300)
