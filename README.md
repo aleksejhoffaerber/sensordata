@@ -5,13 +5,14 @@ Core Goals
 ------------------
 1. Find best feature that predicts lifetime
 2. Create a model to predict the respective feature from 1
-3. Design model results so that final sensor effects are interpretable
+3. Design model results so that final sensor effects are interpretable (ICE & ALE)
 
 Code Architecture 
 -------------------
 * explanatory_data_analysis.R - data preprocessing & EDA
 * model_xgb.R - XGB model training, selection, and testing
-* interpretability - interpretability graphs based on ICE
+* interpretability - interpretability graphs based on ICE and ALE
+* functions.R - functions fpr prediction extraction and custom ALE function
 
 Samples from Results 
 -------------------
