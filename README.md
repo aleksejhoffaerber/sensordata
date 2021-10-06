@@ -21,3 +21,5 @@ Samples from Results
 ![](https://github.com/aleksejhoffaerber/sensordata/blob/18ac97a909fc84ff81fb1070a5737adb13c9300e/Plots/06_XGB_Fit%20Results.png)
 
 ![](https://github.com/aleksejhoffaerber/sensordata/blob/18ac97a909fc84ff81fb1070a5737adb13c9300e/Plots/08_ICE%20XGBoost%20Model.png)
+
+![](https://github.com/aleksejhoffaerber/sensordata/blob/18ac97a909fc84ff81fb1070a5737adb13c9300e/Plots/09_ALE%20XGBoost%20Model.png)
