@@ -97,3 +97,17 @@ ale <- map(
 
 # plot ALE
 
+ale %>% 
+  filter(feature %in% c("lifetime", "26", "44", "31", "13",
+                      "33", "5", "2", "49", "14")) %>% 
+  ggplot(aes(x.values, f.values, color = feature)) +
+  geom_hline(yintercept = 0) +
+  geom_line(size = .8) +
+  geom_rug(color = "black", alpha = 0.5, sides = "b") +
+  facet_wrap(~feature, scales = "free_x") +
+  labs(title = "Accumulated Local Effects for 10 strongest features",
+       subtitle = "Only sensor 44 and lifetime show noteworthy effect on the predictor, \nwith sensor 26 and 31 showing contextual influence",
+       x = "Sensor Values",
+       y = "Relative Importance") +
+  theme_minimal() +
+  theme(legend.position = "none")
